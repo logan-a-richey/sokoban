@@ -2,20 +2,13 @@
 
 import sys
 import json
-
 import tkinter as tk
 from tkinter import ttk
+from typing import List, Optional
 
 from colors import Colors, convert_hex_to_rgb
 
-from typing import List
-
-# --- actual data ---
-#data = {}
-#with open('out.json', 'r') as file:
-#    data = json.load(file)
-#levelsets = sorted(data.keys())
-
+# NOTE
 # --- symbols ---
 # '_' empty
 # '#' wall
@@ -26,23 +19,30 @@ from typing import List
 # '+' player on place
 # ';' end of current row 
 
+# TODO
 # $ ls assets/
 # all images are square
 # brick.png  player.png  red_sphere.png  white_sphere.png
 
+# --- actual data ---
+data = {}
+with open('out.json', 'r') as file:
+    data = json.load(file)
+levelsets = sorted(data.keys())
+
 # Mock data: dict of dicts
-data = {
-    'm1': {
-        'microban_level_1': 'aaa',
-        'microban_level_2': 'bbb',
-        'microban_level_3': 'ccc'
-    },
-    'sas1': {
-        'sasquatch_level_1': 'ddd',
-        'sasquatch_level_2': 'eee',
-        'sasquatch_level_3': 'fff'
-    },
-}
+#data = {
+#    'm1': {
+#        'microban_level_1': 'aaa',
+#        'microban_level_2': 'bbb',
+#        'microban_level_3': 'ccc'
+#    },
+#    'sas1': {
+#        'sasquatch_level_1': 'ddd',
+#        'sasquatch_level_2': 'eee',
+#        'sasquatch_level_3': 'fff'
+#    },
+#}
 
 class Grid:
     def __init__(self, i_: int, j_: int):
@@ -80,11 +80,11 @@ class Level:
         data_lines = self.level_string.split(';')
 
         # make matrix square in case cols do not match (which is likely)
-        num_rows = len(data_lines)
-        num_cols = max(data_lines, key=len)
+        self.num_rows = len(data_lines)
+        self.num_cols = len(max(data_lines, key=len))
 
-        self.grid = [[Cell(i, j) for j in range(num_cols)] for i in range(num_rows)]
-        for i in range(num_rows):
+        self.grid = [[Grid(i, j) for j in range(self.num_cols)] for i in range(self.num_rows)]
+        for i in range(self.num_rows):
             # NOTE each row may contain different number of cols
             for j, char in enumerate(data_lines[i]):
                 g = self.grid[i][j]
@@ -95,17 +95,17 @@ class Level:
                 elif char == '.':
                     g.is_place = True
                 elif char == '$':
-                    g.is_box = True
+                    g.is_block = True
                 elif char == '*':
-                    g.is_box = True
-                    g.is_spot = True
+                    g.is_block = True
+                    g.is_place = True
                 elif char == '@':
                     g.is_player = True
                 elif char == '+':
                     g.is_player = True
-                    g.is_spot = True
+                    g.is_place = True
     
-    def get_player_pos(self) -> List[int, int]:
+    def get_player_pos(self) -> List[int]:
         for i in range(self.num_rows):
             for j in range(self.num_cols):
                 if self.grid[i][j].is_player:
@@ -113,62 +113,59 @@ class Level:
         return [-1, -1]
 
     def make_move(self, move: str):
-        # up, down, left right:
-        # 'u', 'd', 'l', 'r'
-        # 'U', 'D', 'L', 'R' if a block is pushed
-        # do nothing if invalid move.
-        px, py: List[int, int] = self.get_player_pos()
-    
-        commands = ['n', 'e', 's', 'w']
-        directions = [ (0, 1), (1, 0), (0, -1), (-1, 0) ]
+        px, py = self.get_player_pos()
+        
+        commands = ['w', 's', 'a', 'd']
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # Up, Down, Left, Right
         
         for command, direction in zip(commands, directions):
-            if (move != command):
+            if move != command:
                 continue
             
-            dx, dy = direction
+            di, dj = direction
+            adj1 = [px + di, py + dj]  # Adjacent square in the direction
+            adj2 = [px + di * 2, py + dj * 2]  # 2nd adjacent square in the direction
 
-            adj1 = self.grid[px + dx][py + dy]
-            adj2 = self.grid[px + dx * 2][py + dy * 2]
+            # NOTE board bounds check
+            if (adj1[0] < 0 or adj1[1] < 0 or adj1[0] >= self.num_rows or adj1[1] >= self.num_cols):
+                return  # Out of bounds, return without moving
+
+            # Check if player moves into a wall
+            if self.grid[adj1[0]][adj1[1]].is_wall:
+                return  # Can't move into a wall
             
-            # player tries to move into a wall
-            if adj1.is_wall:
+            # Check if player tries to push a block
+            if self.grid[adj1[0]][adj1[1]].is_block:
+                # If the next space is free (not a wall or block)
+                if (adj2[0] >= 0 and adj2[1] >= 0 and adj2[0] < self.num_rows and adj2[1] < self.num_cols):
+                    if not self.grid[adj2[0]][adj2[1]].is_block and not self.grid[adj2[0]][adj2[1]].is_wall:
+                        # Push the box to the adjacent space
+                        self.grid[adj2[0]][adj2[1]].is_block = True
+                        self.grid[adj1[0]][adj1[1]].is_block = False
+                        self.grid[px][py].is_player = False
+                        self.grid[adj1[0]][adj1[1]].is_player = True
+                        return
+                # If not, the box can't be pushed
                 return
-            # player tries to push a block
-            if adj1.is_block:
-                # if vacant space
-                if (!adj2.is_block or !adj2.is_wall):
-                    adj2.is_block = True
-                    self.grid[pp[0]][pp[1]].is_player = False
-                    adj1.is_player = True
-                    self.move_history.append(command.upper) # uppercase moves that push blocks
-                    return
-                else:
-                    # not a vacant space
-                    return 
 
-            # player moves into empty space
-            self.grid[pp[0]][pp[1]].is_player = False
-            adj1.is_player = True
-            self.move_history.append(command)
+            # Player moves into an empty space
+            self.grid[px][py].is_player = False
+            self.grid[adj1[0]][adj1[1]].is_player = True
             return
-        return
     
     def is_solved(self) -> bool:
         for i in range(self.num_rows):
             for j in range(self.num_cols):
                 g = self.grid[i][j] 
-                if (g.is_place and !self.is_box):
+                if g.is_place and not g.is_block:
                     return False
         return True
-
 
 class SokobanApp:
     def __init__(self, root):
         self.levelsets: List[str] = sorted(data.keys())
         self.current_levelset: str = self.levelsets[0]
         
-        # self.levels: List[str] = sorted(data[self.current_levelset].keys())
         self.levels: List[str] = []
         self.current_level: str = ""
         self.update_level_list()
@@ -190,7 +187,15 @@ class SokobanApp:
         self.canvas = tk.Canvas(root, width=400, height=400, bg="white")
         self.canvas.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
         
+        self.level_obj: Optional["Level"] = None
+        self.bind_keys()
         self.draw_board()
+
+    def bind_keys(self):
+        self.root.bind('<w>', lambda event: self.make_move('w'))
+        self.root.bind('<s>', lambda event: self.make_move('s'))
+        self.root.bind('<a>', lambda event: self.make_move('a'))
+        self.root.bind('<d>', lambda event: self.make_move('d'))
 
     def update_level_list(self):
         self.levels = sorted(data[self.current_levelset].keys())
@@ -198,8 +203,7 @@ class SokobanApp:
 
     def update_levelset(self, x):
         self.current_levelset = x 
-        self.update_level_list 
-        
+        self.update_level_list()
         self.level_var.set(self.current_level)
 
         # Update the level dropdown menu
@@ -209,26 +213,22 @@ class SokobanApp:
                 label=level, 
                 command=tk._setit(self.level_var, level)
             )
-        self.load_level(self, self.current_level)
+        self.load_level(self.current_level)
 
     def load_level(self, selected_level):
         self.current_level = selected_level 
-        
-        # NOTE key error?
         level_string = data[self.current_levelset][self.current_level]
-        print("levelset = {}, level = {}, leveldata = {}".format(
-            self.current_levelset, 
-            self.current_level, 
-            level_string)
-        )
-
         self.level_obj = Level(self, level_string)
 
     def draw_board(self):
+        if not self.level_obj:
+            return 
+
         self.canvas.delete("all")
         tile_size = 50
-        for row in range(8):
-            for col in range(8):
+        for row in range(self.level_obj.num_rows):
+            for col in range(self.level_obj.num_cols):
+                g = self.level_obj.grid[row][col]
                 color = Colors.TanLight if (row + col) % 2 == 0 else Colors.TanDark
                 x0 = col * tile_size
                 y0 = row * tile_size
@@ -237,8 +237,14 @@ class SokobanApp:
                 hex_color = '#%02x%02x%02x' % color
                 self.canvas.create_rectangle(x0, y0, x1, y1, fill=hex_color, outline='black')
 
+    def make_move(self, direction: str):
+        if not self.level_obj:
+            return
+
+        self.level_obj.make_move(direction)
+        self.draw_board()
+
 if __name__ == "__main__":
     root = tk.Tk()
     app = SokobanApp(root)
     root.mainloop()
-
