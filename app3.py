@@ -78,6 +78,7 @@ class Level:
         self.undo_history.clear()
 
         data_lines = self.level_string.split(';')
+        print("[DEBUG] data_lines: \n{}", '\n'.join(data_lines))
 
         # make matrix square in case cols do not match (which is likely)
         self.num_rows = len(data_lines)
@@ -213,11 +214,15 @@ class SokobanApp:
                 label=level, 
                 command=tk._setit(self.level_var, level)
             )
+        
+        # TODO
         self.load_level(self.current_level)
 
     def load_level(self, selected_level):
         self.current_level = selected_level 
         level_string = data[self.current_levelset][self.current_level]
+        
+        # TODO this function not being called?
         self.level_obj = Level(self, level_string)
 
     def draw_board(self):
