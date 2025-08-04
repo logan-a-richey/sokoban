@@ -2,7 +2,7 @@
 ## About:
 Work in progress implementation the puzzle game, Sokoban.
 
-## How to play:
+## How to play
 * The objective is to push all of the red spheres onto the green squares.
 * Select a level with the **Levelset** and **Level** dropdown menus.
 * Move the player with the `WASD` keys. 
@@ -13,11 +13,10 @@ Work in progress implementation the puzzle game, Sokoban.
 * Persitent level progress via a `.json` config file.
 * Simple GUI in `Tkinter`.
 
-> [!NOTE]
-> Work in progress: CLI, GUI, and Solver
+## Todo
 * I plan to refactor all the core game logic using `PerlTK` as a learning exercise.
 * Web version
-* C++ SDL version with WXWidgets 
+* C++ SDL version with `wxWidgets` 
 * AI solver in C++, Perl, or Python
 
 ## License 
