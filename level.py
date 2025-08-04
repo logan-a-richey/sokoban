@@ -3,6 +3,9 @@
 from typing import List
 
 from colors import Colors 
+import re
+
+# RE_LEVEL_PARTS = re.compile(r'[^;]')
 
 class Grid:
     def __init__(self, i_: int, j_: int):
@@ -36,9 +39,9 @@ class Level:
         Call this function to reset the level to its initial position 
         '''
         self.undo_history.clear()
-
+        
         data_lines = self.level_string.split(';')
-        print("[DEBUG] data_lines:\n{}".format('\n'.join(data_lines)))
+        data_lines.pop()
 
         # make matrix square in case cols do not match (which is likely)
         self.num_rows = len(data_lines)
@@ -121,3 +124,4 @@ class Level:
                 if g.is_place and not g.is_block:
                     return False
         return True
+
