@@ -1,11 +1,22 @@
-# object wrapper around a sokoban level 
+# level.py
+
+# NOTE
+# --- symbols ---
+# '_' empty
+# '#' wall
+# '.' place 
+# '$' box
+# '*' box on place 
+# '@' player
+# '+' player on place
+# ';' end of current row 
+
+# TODO
+# $ ls assets/
+#   brick.png  player.png  red_sphere.png  white_sphere.png
 
 from typing import List
-
 from colors import Colors 
-import re
-
-# RE_LEVEL_PARTS = re.compile(r'[^;]')
 
 class Grid:
     def __init__(self, i_: int, j_: int):
@@ -29,17 +40,23 @@ class Level:
         self.num_rows = 8 # default to be changed
         self.num_cols = 8 # default to be changed
         self.undo_history: List[str] = [] # should contain only chars - see `make_move()`
+        self.history_index: int = 0
 
         # load the level grid
         self.init_grid()
         
+        self.seen_solved_message = False 
+
     def init_grid(self):
         ''' 
         new game function
         Call this function to reset the level to its initial position 
         '''
+
+        self.seen_solved_message = False 
         self.undo_history.clear()
-        
+        self.history_index = 0
+
         data_lines = self.level_string.split(';')
         data_lines.pop()
 
@@ -76,47 +93,72 @@ class Level:
                     return [i, j]
         return [-1, -1]
 
-    def make_move(self, move: str):
+    def make_move(self, move: str, truncate=True):
         px, py = self.get_player_pos()
-        
-        commands = ['w', 's', 'a', 'd']
-        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # Up, Down, Left, Right
-        
-        for command, direction in zip(commands, directions):
-            if move != command:
-                continue
-            
-            di, dj = direction
-            adj1 = [px + di, py + dj]  # Adjacent square in the direction
-            adj2 = [px + di * 2, py + dj * 2]  # 2nd adjacent square in the direction
 
-            # NOTE board bounds check
-            if (adj1[0] < 0 or adj1[1] < 0 or adj1[0] >= self.num_rows or adj1[1] >= self.num_cols):
-                return  # Out of bounds, return without moving
+        directions = {'w': (-1, 0), 's': (1, 0), 'a': (0, -1), 'd': (0, 1)}
+        if move not in directions: return
 
-            # Check if player moves into a wall
-            if self.grid[adj1[0]][adj1[1]].is_wall:
-                return  # Can't move into a wall
-            
-            # Check if player tries to push a block
-            if self.grid[adj1[0]][adj1[1]].is_block:
-                # If the next space is free (not a wall or block)
-                if (adj2[0] >= 0 and adj2[1] >= 0 and adj2[0] < self.num_rows and adj2[1] < self.num_cols):
-                    if not self.grid[adj2[0]][adj2[1]].is_block and not self.grid[adj2[0]][adj2[1]].is_wall:
-                        # Push the box to the adjacent space
-                        self.grid[adj2[0]][adj2[1]].is_block = True
-                        self.grid[adj1[0]][adj1[1]].is_block = False
-                        self.grid[px][py].is_player = False
-                        self.grid[adj1[0]][adj1[1]].is_player = True
-                        return
-                # If not, the box can't be pushed
-                return
+        di, dj = directions[move]
+        adj1 = [px + di, py + dj]
+        adj2 = [px + 2*di, py + 2*dj]
 
-            # Player moves into an empty space
-            self.grid[px][py].is_player = False
-            self.grid[adj1[0]][adj1[1]].is_player = True
+        # Bounds check
+        if not (0 <= adj1[0] < self.num_rows and 0 <= adj1[1] < self.num_cols): return
+
+        g1 = self.grid[adj1[0]][adj1[1]]
+        g2 = self.grid[adj2[0]][adj2[1]] if (0 <= adj2[0] < self.num_rows and 0 <= adj2[1] < self.num_cols) else None
+
+        move_record = move  # default to lowercase (no push)
+
+        # Wall block
+        if g1.is_wall: return
+
+        # Try to push box
+        if g1.is_block:
+            if g2 and not g2.is_wall and not g2.is_block:
+                g2.is_block = True
+                g1.is_block = False
+                move_record = move.upper()  # Uppercase for push
+            else: return  # Can't push
+
+        # Move player
+        self.grid[px][py].is_player = False
+        g1.is_player = True
+
+        if truncate:
+            del self.undo_history[self.history_index:]
+            self.undo_history.append(move_record)
+        self.history_index += 1
+
+    def undo_move(self):
+        if self.history_index == 0:
+            print("No more moves to undo!")
             return
+
+        self.history_index -= 1
+        action = self.undo_history[self.history_index]
+        pi, pj = self.get_player_pos()
+        self.grid[pi][pj].is_player = False
+
+        di, dj = {'w': (-1, 0), 's': (1, 0), 'a': (0, -1), 'd': (0, 1)}[action.lower()]
+        back_i, back_j = pi - di, pj - dj
+        self.grid[back_i][back_j].is_player = True
+
+        if action.isupper():
+            # box was pushed — undo it
+            box_i, box_j = pi + di, pj + dj
+            self.grid[box_i][box_j].is_block = False
+            self.grid[pi][pj].is_block = True
     
+    def redo_move(self):
+        if self.history_index >= len(self.undo_history):
+            print("No more moves to redo!")
+            return
+
+        move = self.undo_history[self.history_index]
+        self.make_move(move.lower(), truncate=False)
+
     def is_solved(self) -> bool:
         for i in range(self.num_rows):
             for j in range(self.num_cols):

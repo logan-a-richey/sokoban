@@ -6,46 +6,46 @@ import json
 from typing import List, Optional
 
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from PIL import Image, ImageTk
 
 from colors import Colors, convert_hex_to_rgb
 from level import Level
-
-def natural_sort_key(s):
-    return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', s)]
-
-# NOTE
-# --- symbols ---
-# '_' empty
-# '#' wall
-# '.' place 
-# '$' box
-# '*' box on place 
-# '@' player
-# '+' player on place
-# ';' end of current row 
-
-# TODO
-# $ ls assets/
-# all images are square
-# brick.png  player.png  red_sphere.png  white_sphere.png
+from progress_manager import ProgressManager 
 
 # --- actual data ---
+import subprocess
+
+# update levels
+perl_script_path = "./load_levels.pl"
+retcode = subprocess.call(["perl", perl_script_path])
+if retcode == 0:
+    print("Levels loaded - ok")
+else:
+    print("Levels loaded - FAIL: {}".format(retcode))
+
 data = {}
 with open('out.json', 'r') as file:
     data = json.load(file)
 
+# ------------------------------------------------------------------------------
+
+def natural_sort_key(s):
+    return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', s)]
+
 MIN_TILE_SIZE = 10
 MAX_TILE_SIZE = 100
+
 
 class SokobanApp:
     def __init__(self, root):
         self.root = root
         root.title("Sokoban Game")
+        
+        self.progress_manager = ProgressManager()
 
         self.tile_size = 40
-        self.levelsets: List[str] = sorted(data.keys())
+        self.levelsets: List[str] = sorted(data.keys(), key=natural_sort_key)
         self.current_levelset: str = self.levelsets[0]
 
         self.levels: List[str] = sorted(data[self.current_levelset].keys(), key=natural_sort_key)
@@ -78,7 +78,8 @@ class SokobanApp:
         # --- Images --- 
         self.image_name_to_path = {
             "wall": "assets/brick.png",
-            "player": "assets/player.png",
+            #"player": "assets/player.png",
+            "player": "assets/penguin.png",
             "box_red": "assets/red_sphere.png",
             "box_white": "assets/white_sphere.png"
         }
@@ -97,6 +98,7 @@ class SokobanApp:
         self.bind_keys()
 
         # --- Initial Setup ---
+        self.populate_level_combobox()
         self.load_level(self.current_level)
     
     def load_images(self):
@@ -117,6 +119,9 @@ class SokobanApp:
         self.root.bind('<d>', lambda event: self.make_move('d'))
         self.root.bind('<Control-equal>', self.zoom_in)
         self.root.bind('<Control-minus>', self.zoom_out)
+        self.root.bind('<Control-n>', self.reset_level)
+        self.root.bind('<Control-z>', self.undo_move)
+        self.root.bind('<Control-y>', self.redo_move)
     
     def zoom_in(self, event=None):
         self.tile_size = min(MAX_TILE_SIZE, self.tile_size + 5)
@@ -127,25 +132,44 @@ class SokobanApp:
         self.tile_size = max(MIN_TILE_SIZE, self.tile_size - 5)
         self.draw_board()
         print("[ACTION] Zoom out!")
+    
+    def populate_level_combobox(self):
+        values = []
+
+        for lvl in self.levels:
+            info = self.progress_manager.get_info(self.current_levelset, lvl)
+            status = "[X]" if info["has_solved"] else "[ ]"
+            move_str = f" ({info['minimum_moves']}m)" if info["minimum_moves"] != -1 else ""
+            display_label = f"{status} {lvl}{move_str}"
+            values.append(display_label)
+
+        self.level_combo['values'] = values
 
     def on_levelset_select(self, event):
         self.current_levelset = self.levelset_var.get()
-        self.levels = sorted(data[self.current_levelset].keys())
+        self.levels = sorted(data[self.current_levelset].keys(), key=natural_sort_key)
         self.current_level = self.levels[0]
         self.level_var.set(self.current_level)
-        self.level_combo['values'] = self.levels
         self.load_level(self.current_level)
+        
+        # self.level_combo['values'] = self.levels
+        self.populate_level_combobox()
 
     def on_level_select(self, event):
-        selected_level = self.level_var.get()
-        self.load_level(selected_level)
+        # TODO 
+        # selected_level = self.level_var.get()
+        # self.load_level(selected_level)
+
+        # NOTE strip [X] [ ] prefix from a level name
+        label = self.level_var.get()
+        match = re.search(r"\] (.+?)(?: \(\d+m\))?$", label)
+        level_name = match.group(1) if match else label
+        self.load_level(level_name)
 
     def load_level(self, selected_level):
         self.current_level = selected_level
         level_string = data[self.current_levelset][self.current_level]
         self.level_obj = Level(self, level_string)
-
-        # self.canvas.config( width=self.tile_size * self.level_obj.num_cols, height=self.tile_size * self.level_obj.num_rows)
         self.draw_board()
 
     def draw_board(self):
@@ -193,18 +217,46 @@ class SokobanApp:
         self.level_obj.make_move(direction)
         self.draw_board()
 
+        # Alert when solved
+        if(self.level_obj.is_solved()):
+            if self.level_obj.seen_solved_message:
+                return
+            
+            self.level_obj.seen_solved_message = True  
+            num_moves = len(self.level_obj.undo_history)
+            
+            self.progress_manager.update_progress(self.current_levelset, self.current_level, num_moves)
+            self.populate_level_combobox()
+            
+            message = "Congrats!\nSolved \'{} {}\' in {} moves.".format(self.current_levelset, self.current_level, num_moves)
+            messagebox.showinfo("Level complete!", message)
+
+
     # --- Button Commands (for now just print) ---
-    def reset_level(self):
+    def reset_level(self, event=None):
         print("[ACTION] Reset level")
-        if self.level_obj:
-            self.level_obj.init_grid()
-            self.draw_board()
+        if not self.level_obj:
+            return
 
-    def undo_move(self):
+        self.level_obj.init_grid()
+        self.draw_board()
+
+    def undo_move(self, event=None):
         print("[ACTION] Undo move")
+        if not self.level_obj:
+            return
 
-    def redo_move(self):
+        self.level_obj.undo_move()
+        self.draw_board()
+
+    def redo_move(self, event=None):
         print("[ACTION] Redo move")
+        if not self.level_obj:
+            return
+
+        self.level_obj.redo_move()
+        self.draw_board()
+
 
 if __name__ == "__main__":
     root = tk.Tk()

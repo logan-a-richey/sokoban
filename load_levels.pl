@@ -10,8 +10,6 @@ use JSON;
 # persistent level vars
 my $data = {};
 
-# ------------------------------------
-
 # data directory to read
 my $level_dir = "leveldata";
 
@@ -30,7 +28,8 @@ while (my $file_name = readdir($dh)) {
     my $current_levelset = basename($file_path, ".txt");
 
     # keep track of what level we are on in the file
-    my $current_level = 0;
+    my $level_count = 0;
+    my $level_name = "";
 
     # read all the levels in the levelset file line by line
     open (my $fh, '<', $file_path) or warn "[W] Cannot open file $file_path: $!";
@@ -41,14 +40,19 @@ while (my $file_name = readdir($dh)) {
         
         # if a line begins with a ;, this marks a new level
         if ($line =~ /^\s*\;/) {
-            $current_level++;
+            $level_count++;
+            $level_name = "Level $level_count";
+
+            if ($line =~ /'(.*)'/) {
+                # say "Found nickname: '$1'";
+                $level_name .= " '$1'";
+            }
             next;
         }
-
-        # append level data line to
         $line =~ s/\s/_/g;
-        $data->{$current_levelset}{"level_$current_level"} .= "$line;";
+        $data->{$current_levelset}{$level_name} .= "$line;";
     }
+    say "Processed levelset: $current_levelset";
     close($fh);
 }
 closedir($dh);
