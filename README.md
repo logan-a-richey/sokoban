@@ -1,5 +1,5 @@
 # Sokoban
-## About:
+## About
 Work in progress implementation the puzzle game, Sokoban.
 
 ## How to play
