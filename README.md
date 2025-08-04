@@ -14,7 +14,7 @@ Work in progress implementation the puzzle game, Sokoban.
 
 ## Features
 * Perl to parse level data and store it via a `.json` data structure.
-* Persitent level progress via a `.json` config file.
+* Persistent level progress via a `.json` config file.
 * Simple GUI in `Tkinter`.
 * Over 1000 levels included from the Sasquatch and Microban levelsets
 
