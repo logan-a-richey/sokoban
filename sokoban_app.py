@@ -16,6 +16,14 @@ from progress_manager import ProgressManager
 # --- actual data ---
 import subprocess
 
+# menubar:
+# | play | game | prefs | about |
+
+# play: 
+# level_id  | solved? | best attempt
+
+# game: undo (ctrl+z), redo (ctrl+y), reset (ctrl+n)
+
 # update levels
 perl_script_path = "./load_levels.pl"
 retcode = subprocess.call(["perl", perl_script_path])
@@ -81,6 +89,7 @@ class SokobanApp:
         self.reset_btn = ttk.Button(root, text="Level Reset", command=self.reset_level)
         self.undo_btn = ttk.Button(root, text="Undo", command=self.undo_move)
         self.redo_btn = ttk.Button(root, text="Redo", command=self.redo_move)
+        
         self.reset_btn.grid(row=2, column=0, padx=5, pady=5)
         self.undo_btn.grid(row=2, column=1, padx=5, pady=5, sticky='w')
         self.redo_btn.grid(row=2, column=1, padx=5, pady=5, sticky='e')
@@ -123,12 +132,23 @@ class SokobanApp:
             self.tk_images[name] = tk_image
 
     def bind_keys(self):
+        # lower move
         self.root.bind('<w>', lambda event: self.make_move('w'))
         self.root.bind('<s>', lambda event: self.make_move('s'))
         self.root.bind('<a>', lambda event: self.make_move('a'))
         self.root.bind('<d>', lambda event: self.make_move('d'))
+        
+        # upper move
+        self.root.bind('<W>', lambda event: self.make_move('w', repeat=5))
+        self.root.bind('<S>', lambda event: self.make_move('s', repeat=5))
+        self.root.bind('<A>', lambda event: self.make_move('a', repeat=5))
+        self.root.bind('<D>', lambda event: self.make_move('d', repeat=5))
+
+        # zoom
         self.root.bind('<Control-equal>', self.zoom_in)
         self.root.bind('<Control-minus>', self.zoom_out)
+
+        # level events
         self.root.bind('<Control-n>', self.reset_level)
         self.root.bind('<Control-z>', self.undo_move)
         self.root.bind('<Control-y>', self.redo_move)
@@ -220,12 +240,13 @@ class SokobanApp:
                 if g.is_player:
                     self.canvas.create_image(x0, y0, image=self.tk_images['player'], anchor='nw')
 
-    def make_move(self, direction: str):
+    def make_move(self, direction: str, repeat=1):
         if not self.level_obj:
             return
-
-        self.level_obj.make_move(direction)
-        self.draw_board()
+        
+        for i in range(repeat):
+            self.level_obj.make_move(direction)
+            self.draw_board()
 
         # Alert when solved
         if(self.level_obj.is_solved()):
@@ -233,18 +254,50 @@ class SokobanApp:
                 return
             
             self.level_obj.seen_solved_message = True  
+            
             num_moves = len(self.level_obj.undo_history)
             
             self.progress_manager.update_progress(self.current_levelset, self.current_level, num_moves)
             self.populate_level_combobox()
             
-            message = "Congrats!\nSolved \'{} {}\' in {} moves.".format(self.current_levelset, self.current_level, num_moves)
-            messagebox.showinfo("Level complete!", message)
+            self.spawn_level_win_popup()
 
+    def spawn_level_win_popup(self):
+        popup_window = tk.Toplevel(self.root)
+        popup_window.title("Level completed.")
+        popup_window.geometry("300x200")
+       
+        num_moves = len(self.level_obj.undo_history)
+        
+        message = "Congrats!\nSolved \'{} {}\' in {} moves.".format(
+            self.current_levelset, 
+            self.current_level, 
+            num_moves
+        )
+
+        label = tk.Label(popup_window, text=message)
+        label.pack(pady=20)
+        
+        def next_level_button_func():
+            print("call next level button")
+            this_level_index = self.levels.index(self.current_level)
+            next_level_index = (this_level_index + 1) % len(self.levels)
+            self.on_level_select(self.levels[next_level_index])
+            popup_window.destroy()
+            return 
+
+        next_level_button = tk.Button(popup_window, text="Next Level", command=next_level_button_func)
+        next_level_button.pack()
+        
+        close_button = tk.Button(popup_window, text="Close", command=popup_window.destroy)
+        close_button.pack()
+        
+        # TODO 
+        pass 
 
     # --- Button Commands (for now just print) ---
     def reset_level(self, event=None):
-        print("[ACTION] Reset level")
+        # print("[ACTION] Reset level")
         if not self.level_obj:
             return
 
@@ -252,7 +305,7 @@ class SokobanApp:
         self.draw_board()
 
     def undo_move(self, event=None):
-        print("[ACTION] Undo move")
+        # print("[ACTION] Undo move")
         if not self.level_obj:
             return
 
@@ -260,7 +313,7 @@ class SokobanApp:
         self.draw_board()
 
     def redo_move(self, event=None):
-        print("[ACTION] Redo move")
+        # print("[ACTION] Redo move")
         if not self.level_obj:
             return
 
