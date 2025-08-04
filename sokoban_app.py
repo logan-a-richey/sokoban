@@ -23,10 +23,18 @@ if retcode == 0:
     print("Levels loaded - ok")
 else:
     print("Levels loaded - FAIL: {}".format(retcode))
+    exit(1)
 
 data = {}
 with open('out.json', 'r') as file:
     data = json.load(file)
+
+#num_levels = 0 
+#for levelset in data.keys():
+#    for level in data[levelset].keys():
+#        num_levels += 1 
+#print("# levels =", num_levels)
+#exit(0)
 
 # ------------------------------------------------------------------------------
 
@@ -39,6 +47,8 @@ MAX_TILE_SIZE = 100
 
 class SokobanApp:
     def __init__(self, root):
+        print("Running SokobanApp!")
+
         self.root = root
         root.title("Sokoban Game")
         
