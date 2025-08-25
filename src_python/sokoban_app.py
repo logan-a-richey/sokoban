@@ -97,7 +97,6 @@ class SokobanApp:
         # --- Images --- 
         self.image_name_to_path = {
             "wall": "assets/brick.png",
-            #"player": "assets/player.png",
             "player": "assets/penguin.png",
             "box_red": "assets/red_sphere.png",
             "box_white": "assets/white_sphere.png"
