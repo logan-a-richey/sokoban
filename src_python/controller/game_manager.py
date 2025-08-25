@@ -13,38 +13,10 @@ from colors import Colors, convert_hex_to_rgb
 from level import Level
 from progress_manager import ProgressManager 
 
+from controller.level_loader import LevelLoader 
+
 # --- actual data ---
 import subprocess
-
-# menubar:
-# | play | game | prefs | about |
-
-# play: 
-# level_id  | solved? | best attempt
-
-# game: undo (ctrl+z), redo (ctrl+y), reset (ctrl+n)
-
-# update levels
-perl_script_path = "./load_levels.pl"
-retcode = subprocess.call(["perl", perl_script_path])
-if retcode == 0:
-    print("Levels loaded - ok")
-else:
-    print("Levels loaded - FAIL: {}".format(retcode))
-    exit(1)
-
-data = {}
-with open('out.json', 'r') as file:
-    data = json.load(file)
-
-#num_levels = 0 
-#for levelset in data.keys():
-#    for level in data[levelset].keys():
-#        num_levels += 1 
-#print("# levels =", num_levels)
-#exit(0)
-
-# ------------------------------------------------------------------------------
 
 def natural_sort_key(s):
     return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', s)]
@@ -52,8 +24,7 @@ def natural_sort_key(s):
 MIN_TILE_SIZE = 10
 MAX_TILE_SIZE = 100
 
-
-class SokobanApp:
+class MainWindow:
     def __init__(self, root):
         print("Running SokobanApp!")
 
@@ -318,10 +289,4 @@ class SokobanApp:
 
         self.level_obj.redo_move()
         self.draw_board()
-
-
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = SokobanApp(root)
-    root.mainloop()
 
