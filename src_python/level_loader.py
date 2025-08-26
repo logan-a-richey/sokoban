@@ -27,6 +27,8 @@ class LevelLoader:
             # read file line by line
             with open(file_path, "r") as f:
                 for line in f:
+                    line = line.replace(' ',  '_')
+
                     line = line.strip()
                     if not line:
                         continue  # skip blank lines

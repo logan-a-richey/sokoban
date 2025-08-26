@@ -3,6 +3,7 @@
 from level_loader import LevelLoader
 from progress_manager import ProgressManager
 from sokoban_engine import SokobanEngine
+from image_handler import ImageHandler
 from main_window import MainWindow
 
 class GameManager:
@@ -22,6 +23,7 @@ class GameManager:
         self.engine = SokobanEngine()
 
         # core gui logic
+        self.image_handler = ImageHandler()
         self.main_window = MainWindow(root, self)
         
         # launch the first level if possible 
@@ -32,7 +34,8 @@ class GameManager:
             print("No levels to load")
             return
 
-        first_levelset = list(self.data.keys())[0] 
+        # first_levelset = list(self.data.keys())[0] 
+        first_levelset = "Microban1"
         first_level = list(self.data[first_levelset].keys())[0]
         self.load_level(first_levelset, first_level)
     
@@ -41,6 +44,8 @@ class GameManager:
         if not level_data:
             print("Failed to load level_data")
             return 
+
+        self.engine.new_game(level_data)
     
     def on_level_load_from_file(self, filepath: str):
         print("Loading level ...")

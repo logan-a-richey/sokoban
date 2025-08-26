@@ -1,5 +1,14 @@
 # sokoban_engine.py
 
+# '_' empty
+# '#' wall
+# '.' place 
+# '$' box
+# '*' box on place 
+# '@' player
+# '+' player on place
+# ';' end of current row 
+
 from dataclasses import dataclass
 from typing import List
 
@@ -7,7 +16,7 @@ from typing import List
 class Tile:
     is_player: bool
     is_wall: bool
-    is_block: bool
+    is_box: bool
     is_solution_spot: bool
 
 @dataclass 
@@ -22,11 +31,66 @@ class SokobanEngine:
         self.grid = []
         self.move_history: List["Move"] = []
 
-    def new_game(self, level_dict: dict) -> None:
-        num_rows = 3 # TODO
-        num_cols = 4 # TODO
-        self.grid = [[Tile(False, False, False, False) for j in range(num_cols)] for i in range(num_rows)] 
+    def new_game(self, level_data: str) -> None:
+        self.grid.clear()
         self.move_history.clear()
+        
+        rows = level_data.strip(';').split(';')
+        
+        print(level_data)
+        print(rows)
+
+        num_rows = len(rows)
+        num_cols = 1
+        
+        for row in rows:
+            num_cols = max(num_cols, len(row) )
+
+        self.grid = [
+            [Tile(False, False, False, False) for j in range(num_cols)] \
+            for i in range(num_rows)
+        ] 
+        
+        for i, row in enumerate(rows):
+            for j, char in enumerate(row):
+                # print(char, end=" ")
+                g = self.grid[i][j]
+                if char == '#':
+                    g.is_wall = True
+                elif char == '.':
+                    g.is_solution_spot = True
+                elif char == '$':
+                    g.is_box = True
+                elif char == '*':
+                    g.is_box = True
+                    g.is_solution_spot = True
+                elif char == '@':
+                    g.is_player = True
+                elif char == '+':
+                    g.is_player = True
+                    g.is_solution_spot = True
+                else:
+                    pass
+            # print()
+
+        print("---")
+        self.print_grid()
+    
+    def print_grid(self):
+        for i in range(len(self.grid)):
+            for j in range(len(self.grid[0])):
+                g = self.grid[i][j] 
+                sym = '.'
+                if g.is_wall: 
+                    sym = '#'
+                elif g.is_player:
+                    sym = 'P' if g.is_solution_spot else 'p'
+                elif g.is_box:
+                    sym = 'B' if g.is_solution_spot else 'b'
+                else:
+                    sym = '*' if g.is_solution_spot else '.'
+                print(sym, end=" ")
+            print()
 
     def make_move(self, move: str) -> None:
         pass
