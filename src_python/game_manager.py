@@ -85,9 +85,11 @@ class GameManager:
         return
         
     def on_zoom_in(self):
+        print("on_zoom_in")
         pass
 
     def on_zoom_out(self):
+        print("on_zoom_out")
         pass 
 
     def on_refresh(self):

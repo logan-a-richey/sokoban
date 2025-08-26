@@ -6,10 +6,6 @@ import tkinter as tk
 from popups import AboutPopup, WinPopup
 from main_canvas import MainCanvas 
 
-def natural_sort_key(s):
-    return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', s)]
-
-
 class MainWindow(tk.Frame):
     def __init__(self, root, controller):
         self.root = root
@@ -27,7 +23,6 @@ class MainWindow(tk.Frame):
     
     def build_level_menu(self, menubar, data, on_level_load, levels_per_category=20):
         def natural_sort_key(s):
-            import re
             return [int(text) if text.isdigit() else text.lower()
                     for text in re.split("([0-9]+)", s)]
 
@@ -105,8 +100,26 @@ class MainWindow(tk.Frame):
         ctrl y = redo move
         W, A, S, D    = make move
         '''
+        
+        on_make_move : callable = self.controller.on_make_move
+        on_quit : callable = self.controller.on_quit
+        on_zoom_in : callable = self.controller.on_zoom_in 
+        on_zoom_out : callable = self.controller.on_zoom_out 
+        on_level_reset : callable = self.controller.on_level_reset
+        on_undo_move : callable = self.controller.on_undo_move
+        on_redo_move : callable = self.controller.on_redo_move
 
-        self.root.bind("<Escape>", lambda event: self.root.quit() ) 
+        self.root.bind('<w>', lambda event: on_make_move('w') )
+        self.root.bind('<s>', lambda event: on_make_move('a') )
+        self.root.bind('<a>', lambda event: on_make_move('s') )
+        self.root.bind('<d>', lambda event: on_make_move('d') )
 
-        pass 
+        self.root.bind("<Escape>", lambda event: on_quit() ) 
+
+        self.root.bind('<Control-n>', lambda event: on_level_reset() )
+        self.root.bind('<Control-z>', lambda event:on_undo_move() )
+        self.root.bind('<Control-y>', lambda event:on_redo_move() )
+        
+        self.root.bind('<Control-equal>', lambda event: on_zoom_in() )
+        self.root.bind('<Control-minus>', lambda event: on_zoom_out() )
 

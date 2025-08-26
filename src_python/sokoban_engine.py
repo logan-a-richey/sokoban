@@ -36,24 +36,16 @@ class SokobanEngine:
         self.move_history.clear()
         
         rows = level_data.strip(';').split(';')
-        
-        print(level_data)
-        print(rows)
-
         num_rows = len(rows)
         num_cols = 1
         
         for row in rows:
             num_cols = max(num_cols, len(row) )
 
-        self.grid = [
-            [Tile(False, False, False, False) for j in range(num_cols)] \
-            for i in range(num_rows)
-        ] 
+        self.grid = [ [Tile(False, False, False, False) for j in range(num_cols)] for i in range(num_rows) ] 
         
         for i, row in enumerate(rows):
             for j, char in enumerate(row):
-                # print(char, end=" ")
                 g = self.grid[i][j]
                 if char == '#':
                     g.is_wall = True
@@ -71,14 +63,13 @@ class SokobanEngine:
                     g.is_solution_spot = True
                 else:
                     pass
-            # print()
-
-        print("---")
         self.print_grid()
-    
+        print()
+
     def print_grid(self):
-        for i in range(len(self.grid)):
-            for j in range(len(self.grid[0])):
+        bs = self.get_board_state() 
+        for i in range(bs.num_rows):
+            for j in range(bs.num_cols):
                 g = self.grid[i][j] 
                 sym = '.'
                 if g.is_wall: 
@@ -91,9 +82,60 @@ class SokobanEngine:
                     sym = '*' if g.is_solution_spot else '.'
                 print(sym, end=" ")
             print()
+    
+    def get_player_pos(self):
+        bs = self.get_board_state() 
+        for i in range(bs.num_rows):
+            for j in range(bs.num_cols):
+                g = self.grid[i][j] 
+                if g.is_player:
+                    return [i, j]
+        return [-1, -1]
 
     def make_move(self, move: str) -> None:
-        pass
+        if move not in ['w', 'a', 's', 'd']:
+            return
+        
+        bs = self.get_board_state()
+
+        directions = {
+            'w': [-1, 0], # north
+            'a': [0, -1], # west
+            's': [1, 0], # south
+            'd': [0, 1] # east
+        }
+        
+        # player coords
+        pi, pj = self.get_player_pos()
+        
+        # adjacent grid coords
+        direction = directions[move]
+        gi = pi + direction[0]
+        gj = pj + direction[1]
+        
+        # bound check
+        if (gi < 0 or gi >= bs.num_rows or gj < 0 or gj >= bs.num_cols):
+            return
+        
+        g = bs.grid[gi][gj]
+        if g.is_box:
+            ai = pi + direction[0] * 2
+            aj = pj + direction[1] * 2
+            
+            # check for border
+            if (ai < 0 or ai >= bs.num_rows or aj < 0 or aj >= bs.num_cols):
+                return
+            
+            # check for wall or box collisions
+            if self.grid[ai][aj].is_wall or self.grid[ai][aj].is_box:
+                return
+            
+            self.grid[gi][gj].is_box = False 
+            self.grid[ai][aj].is_box = True 
+        
+        # player can move regardless if they are pushing a box
+        self.grid[pi][pj].is_player = False
+        self.grid[gi][gj].is_player = True
 
     def redo_move(self) -> None:
         pass
@@ -102,7 +144,13 @@ class SokobanEngine:
         pass
 
     def is_solved(self) -> bool:
-        pass 
+        bs = self.get_board_state() 
+        for i in range(bs.num_rows):
+            for j in range(bs.num_cols):
+                g = self.grid[i][j] 
+                if (g.is_solution_spot and not g.is_box):
+                    return False
+        return True
     
     def get_board_state(self) -> "BoardState":
         num_rows = len(self.grid)
