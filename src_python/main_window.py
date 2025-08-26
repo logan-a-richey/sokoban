@@ -1,9 +1,14 @@
 # main_window.py
 
+import re
 import tkinter as tk
 
 from popups import AboutPopup, WinPopup
 from main_canvas import MainCanvas 
+
+def natural_sort_key(s):
+    return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', s)]
+
 
 class MainWindow(tk.Frame):
     def __init__(self, root, controller):
@@ -19,7 +24,51 @@ class MainWindow(tk.Frame):
 
         self.bind_events()
         self.setup_menubar()
-        
+    
+    def build_level_menu(self, menubar, data, on_level_load, levels_per_category=20):
+        def natural_sort_key(s):
+            import re
+            return [int(text) if text.isdigit() else text.lower()
+                    for text in re.split("([0-9]+)", s)]
+
+        level_menu = tk.Menu(menubar, tearoff=0)
+
+        for levelset_name in sorted(data.keys(), key=natural_sort_key):
+            levelset_menu = tk.Menu(level_menu, tearoff=0)
+            num_levels = len(data[levelset_name])
+
+            # iterate through levels
+            level_names = list(data[levelset_name].keys())
+
+            levelset_submenu = None
+            category_name = None
+
+            for idx, level_name in enumerate(level_names):
+                if idx % levels_per_category == 0:
+                    # if there's a previous submenu, attach it
+                    if levelset_submenu:
+                        levelset_menu.add_cascade(label=category_name, menu=levelset_submenu)
+
+                    # make a new submenu
+                    levelset_submenu = tk.Menu(levelset_menu, tearoff=0)
+                    end_idx = min(idx + levels_per_category - 1, num_levels - 1)
+                    category_name = f"Levels {idx + 1} to {end_idx + 1} ..."
+
+                # add the level command
+                levelset_submenu.add_command(
+                    label=level_name,
+                    command=lambda ls=levelset_name, ln=level_name: on_level_load(ls, ln)
+                )
+
+            # attach the last submenu
+            if levelset_submenu:
+                levelset_menu.add_cascade(label=category_name, menu=levelset_submenu)
+
+            # attach this levelset menu
+            level_menu.add_cascade(label=levelset_name, menu=levelset_menu)
+
+        menubar.add_cascade(label="Level Select", menu=level_menu)       
+    
     def setup_menubar(self):
         # fetch level data to populate menus
         data : dict = self.controller.level_loader.get_data()
@@ -42,34 +91,9 @@ class MainWindow(tk.Frame):
         menubar.add_cascade(label="File", menu=file_menu)
         
         # level select
-
-        level_menu = tk.Menu(menubar, tearoff=0)
-
-        num_levels = 0 
-        category_name = "null" 
-        category_menu = None 
-
-        for levelset in data:
-            num_levels = len(levelset)
-            for idx, level in enumerate(levelset):
-                if (idx % 20 == 0):
-                    if category_menu:
-                        level_menu.add_cascade(label=category_name, menu=category_menu)
-
-                    # begin a new category
-                    lower_idx = idx
-                    upper_idx = max(idx + 20, num_levels) - 1
-                    category_name = "Levels {} to {}...".format(lower_idx, upper_idx)
-                    category_menu = tk.Menu(menu=levels_menu, tearoff=0)
-                
-                # process the level
-                levelname = "Level {}".format(idx)
-                category_menu.add_command(
-                    label=levelname,
-                    command=lambda levelset=levelset, levelname=levelname: on_level_load(levelset, levelname)
-                )
-        menubar.add_cascade(label="Level Select", menu=level_menu)
-
+        self.build_level_menu(menubar, data, on_level_load, levels_per_category=20)
+        
+        # about menu
         about_menu =  tk.Menu(menubar, tearoff=0)
         about_menu.add_command(label="Open About", command=lambda: self.about_popup.trigger() )
         menubar.add_cascade(label="About", menu=about_menu)

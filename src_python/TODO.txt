@@ -1,0 +1,10 @@
+# TODO
+
+* level loader
+* import asset images
+* rework the engine 
+* canvas drawing
+* about popup
+* on win popup
+* progress manager 
+

@@ -33,7 +33,7 @@ class GameManager:
             return
 
         first_levelset = list(self.data.keys())[0] 
-        first_level = list(first_levelset.keys())[0].name
+        first_level = list(self.data[first_levelset].keys())[0]
         self.load_level(first_levelset, first_level)
     
     def load_level(self, levelset: str, levelname: str):
@@ -79,6 +79,11 @@ class GameManager:
         # TODO - progress manager
         return
         
+    def on_zoom_in(self):
+        pass
+
+    def on_zoom_out(self):
+        pass 
 
     def on_refresh(self):
         board_state = self.engine.get_board_state()
