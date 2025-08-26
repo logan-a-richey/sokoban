@@ -1,7 +1,9 @@
 #!/usr/bin/env python3 
+# main.py 
 
+import sys
+sys.dont_write_bytecode = True
 import tkinter as tk 
-
 from game_manager import GameManager
 
 def main():
