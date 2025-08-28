@@ -9,6 +9,10 @@
 # '+' player on place
 # ';' end of current row 
 
+# TODO 
+# a move that doesn't push a block is lowercase wasd
+# a move that does push a block is uppercase WASD
+
 from dataclasses import dataclass
 from typing import List
 
@@ -28,13 +32,15 @@ class BoardState:
 @dataclass
 class SokobanEngine:
     def __init__(self):
-        self.grid = []
+        self.grid: List[List["Tile"]] = []
         self.move_history: List["Move"] = []
+        self.move_idx: int = 0 
 
     def new_game(self, level_data: str) -> None:
         self.grid.clear()
         self.move_history.clear()
-        
+        self.move_idx = 0 
+
         rows = level_data.strip(';').split(';')
         num_rows = len(rows)
         num_cols = 1
@@ -92,7 +98,7 @@ class SokobanEngine:
                     return [i, j]
         return [-1, -1]
 
-    def make_move(self, move: str) -> None:
+    def make_move(self, move: str, trunc=True) -> None:
         if move not in ['w', 'a', 's', 'd']:
             return
         
@@ -100,8 +106,8 @@ class SokobanEngine:
 
         directions = {
             'w': [-1, 0], # north
-            'a': [0, -1], # west
             's': [1, 0], # south
+            'a': [0, -1], # west
             'd': [0, 1] # east
         }
         
@@ -117,7 +123,12 @@ class SokobanEngine:
         if (gi < 0 or gi >= bs.num_rows or gj < 0 or gj >= bs.num_cols):
             return
         
+
         g = bs.grid[gi][gj]
+        
+        if g.is_wall:
+            return 
+        
         if g.is_box:
             ai = pi + direction[0] * 2
             aj = pj + direction[1] * 2
@@ -136,12 +147,28 @@ class SokobanEngine:
         # player can move regardless if they are pushing a box
         self.grid[pi][pj].is_player = False
         self.grid[gi][gj].is_player = True
-
-    def redo_move(self) -> None:
-        pass
+        
+        if trunc:
+            del self.move_history[self.move_idx:]
+            self.move_history.append(move)
 
     def undo_move(self) -> None:
-        pass
+        if not self.move_history:
+            return
+
+        last_move = self.move_history[self.move_idx]
+        opposite_mapping = { 'w': 's', 's': 'w', 'a': 'd', 'd': 'a' }
+        opposite_move = opposite_mapping.get(last_move, 'w')
+        self.make_move(opposite_move, trunc=False)
+        self.move_idx -= 1 
+    
+    def redo_move(self) -> None:
+        if not self.move_history:
+            return
+
+        last_move = self.move_history[self.move_idx]
+        self.make_move(last_move, trunc=False)
+        self.move_idx += 1 
 
     def is_solved(self) -> bool:
         bs = self.get_board_state() 

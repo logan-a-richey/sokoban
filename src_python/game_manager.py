@@ -32,6 +32,7 @@ class GameManager:
         self.seen_win = False
         self.load_first_level() 
 
+    # level load functions --------------------------------------------------
     def load_first_level(self):
         if not self.data:
             print("No levels to load")
@@ -53,6 +54,10 @@ class GameManager:
         self.engine.new_game(level_data)
         self.on_refresh()
 
+    def on_level_reset(self):
+        print("on_level_reset")
+        pass
+    
     def on_level_load_from_file(self, filepath: str):
         print("Loading level ...")
         pass 
@@ -60,7 +65,8 @@ class GameManager:
     def on_levelset_load_from_file(self, path: str):
         print("Loading levelsets ...")
         pass
-
+    
+    # engine move functions --------------------------------------------------
     def on_make_move(self, move: str):
         print("on_make_move: {}".format(move))
         self.engine.make_move(move)
@@ -69,15 +75,14 @@ class GameManager:
 
     def on_redo_move(self):
         print("on_redo_move")
-        pass
+        self.engine.redo_move()
+        self.on_refresh()
 
     def on_undo_move(self):
         print("on_undo_move")
-        pass
+        self.engine.undo_move()
+        self.on_refresh()
 
-    def on_level_reset(self):
-        print("on_level_reset")
-        pass
 
     def check_is_win(self):
         if self.seen_win:
@@ -91,7 +96,8 @@ class GameManager:
         
         # TODO - progress manager
         return
-        
+    
+    # ui functions  --------------------------------------------------
     def on_zoom_in(self):
         print("on_zoom_in")
         self.settings_manager.on_tile_increase()

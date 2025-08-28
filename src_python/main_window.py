@@ -110,8 +110,8 @@ class MainWindow(tk.Frame):
         on_redo_move : callable = self.controller.on_redo_move
 
         self.root.bind('<w>', lambda event: on_make_move('w') )
-        self.root.bind('<s>', lambda event: on_make_move('a') )
-        self.root.bind('<a>', lambda event: on_make_move('s') )
+        self.root.bind('<a>', lambda event: on_make_move('a') )
+        self.root.bind('<s>', lambda event: on_make_move('s') )
         self.root.bind('<d>', lambda event: on_make_move('d') )
 
         self.root.bind("<Escape>", lambda event: on_quit() ) 
