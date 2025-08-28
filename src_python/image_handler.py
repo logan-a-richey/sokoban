@@ -16,6 +16,9 @@ class ImageHandler:
         self.pil_images = {}
         self.tk_images = {}
 
+        self.load_images()
+        self.resize_images(100)
+
     def load_images(self):
         for name, path in self.image_name_to_path.items():
             pil_image = Image.open(path)
