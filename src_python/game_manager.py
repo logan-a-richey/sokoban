@@ -36,6 +36,20 @@ class GameManager:
         self.load_first_level() 
 
     # level load functions --------------------------------------------------
+    def load_level(self, levelset: str, levelname: str):
+        level_data: dict = self.data.get(levelset, {}).get(levelname, "")
+        
+        if not level_data:
+            print("Failed to load level_data")
+            return 
+        
+        self.last_levelset = levelset
+        self.last_levelname = levelname 
+
+        print("Loaded levelset \'{}\' level \'{}\'".format(levelset, levelname))
+        self.engine.new_game(level_data)
+        self.on_refresh()
+    
     def load_first_level(self):
         if not self.data:
             print("No levels to load")
@@ -45,19 +59,8 @@ class GameManager:
         first_levelset = "Microban1"
         first_level = list(self.data[first_levelset].keys())[0]
         self.load_level(first_levelset, first_level)
-    
-    def load_level(self, levelset: str, levelname: str):
-        level_data: dict = self.data.get(levelset, {}).get(levelname, "")
-        
-        if not level_data:
-            print("Failed to load level_data")
-            return 
-        
-        print("Loaded levelset \'{}\' level \'{}\'".format(levelset, levelname))
-        self.engine.new_game(level_data)
-        self.on_refresh()
 
-    def  on_level_reload(self):
+    def on_level_reload(self):
         print("on_level_reset")
         self.load_level(self.last_levelset, self.last_levelname)
     

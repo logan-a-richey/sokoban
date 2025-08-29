@@ -27,10 +27,10 @@ class SettingsManager:
         self.current_theme = self.themes[0] 
 
     def on_tile_increase(self):
-        self.tile_size = min(100, self.tile_size + 10)
+        self.tile_size = min(100, self.tile_size + 5)
 
     def on_tile_decrease(self):
-        self.tile_size = max(10, self.tile_size - 10)
+        self.tile_size = max(10, self.tile_size - 5)
 
     def get_state(self) -> "SettingsState":
         return SettingsState(self.tile_size, self.current_theme)

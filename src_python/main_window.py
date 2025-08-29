@@ -79,7 +79,7 @@ class MainWindow(tk.Frame):
 
         file_menu = tk.Menu(menubar, tearoff=0)
 
-        file_menu.add_command(label="Reload Current Level (Ctrl+N)", command=lambda: on_level_reset)
+        file_menu.add_command(label="Reload Current Level (Ctrl+N)", command=lambda: on_level_reload() )
         file_menu.add_command(label="Import Level", command=lambda: on_level_import)
         file_menu.add_command(label="Import Levelset", command=lambda: on_levelset_import)
         file_menu.add_command(label="Exit (Escape)", command=lambda: on_quit() )
