@@ -30,6 +30,11 @@ class BoardState:
     grid: List[List["Tile"]]
 
 @dataclass
+class Move:
+    direction: str
+    pushed: bool 
+
+@dataclass
 class SokobanEngine:
     def __init__(self):
         self.grid: List[List["Tile"]] = []
@@ -71,7 +76,7 @@ class SokobanEngine:
                     pass
         self.print_grid()
         print()
-
+    
     def print_grid(self):
         bs = self.get_board_state() 
         for i in range(bs.num_rows):
@@ -97,78 +102,80 @@ class SokobanEngine:
                 if g.is_player:
                     return [i, j]
         return [-1, -1]
-
-    def make_move(self, move: str, trunc=True) -> None:
-        if move not in ['w', 'a', 's', 'd']:
-            return
-        
-        bs = self.get_board_state()
-
-        directions = {
-            'w': [-1, 0], # north
-            's': [1, 0], # south
-            'a': [0, -1], # west
-            'd': [0, 1] # east
-        }
-        
-        # player coords
-        pi, pj = self.get_player_pos()
-        
-        # adjacent grid coords
-        direction = directions[move]
-        gi = pi + direction[0]
-        gj = pj + direction[1]
-        
-        # bound check
-        if (gi < 0 or gi >= bs.num_rows or gj < 0 or gj >= bs.num_cols):
-            return
-        
-
-        g = bs.grid[gi][gj]
-        
-        if g.is_wall:
-            return 
-        
-        if g.is_box:
-            ai = pi + direction[0] * 2
-            aj = pj + direction[1] * 2
-            
-            # check for border
-            if (ai < 0 or ai >= bs.num_rows or aj < 0 or aj >= bs.num_cols):
-                return
-            
-            # check for wall or box collisions
-            if self.grid[ai][aj].is_wall or self.grid[ai][aj].is_box:
-                return
-            
-            self.grid[gi][gj].is_box = False 
-            self.grid[ai][aj].is_box = True 
-        
-        # player can move regardless if they are pushing a box
-        self.grid[pi][pj].is_player = False
-        self.grid[gi][gj].is_player = True
-        
-        if trunc:
-            del self.move_history[self.move_idx:]
-            self.move_history.append(move)
-
-    def undo_move(self) -> None:
-        if not self.move_history:
-            return
-
-        last_move = self.move_history[self.move_idx]
-        opposite_mapping = { 'w': 's', 's': 'w', 'a': 'd', 'd': 'a' }
-        opposite_move = opposite_mapping.get(last_move, 'w')
-        self.make_move(opposite_move, trunc=False)
-        self.move_idx -= 1 
     
-    def redo_move(self) -> None:
-        if not self.move_history:
+    def make_move(self, move: str, truncate=True):
+        px, py = self.get_player_pos()
+
+        directions = {'w': (-1, 0), 's': (1, 0), 'a': (0, -1), 'd': (0, 1)}
+        if move.lower() not in directions:
             return
 
+        di, dj = directions[move.lower()]
+        adj1 = [px + di, py + dj]
+        adj2 = [px + 2*di, py + 2*dj]
+
+        # Bounds check
+        if not (0 <= adj1[0] < len(self.grid) and 0 <= adj1[1] < len(self.grid[0])):
+            return
+
+        g1 = self.grid[adj1[0]][adj1[1]]
+        g2 = self.grid[adj2[0]][adj2[1]] if (0 <= adj2[0] < len(self.grid) and 0 <= adj2[1] < len(self.grid[0])) else None
+
+        pushed = False
+
+        if g1.is_wall:
+            return
+
+        if g1.is_box:
+            if g2 and not g2.is_wall and not g2.is_box:
+                g2.is_box = True
+                g1.is_box = False
+                pushed = True
+            else:
+                return
+
+        # Move player
+        self.grid[px][py].is_player = False
+        g1.is_player = True
+
+        # Only record if this is a new move
+        if truncate:
+            # Remove future redo moves
+            del self.move_history[self.move_idx:]
+            self.move_history.append(Move(move.lower(), pushed))
+            self.move_idx += 1
+
+    def undo_move(self):
+        if self.move_idx == 0:
+            return
+
+        self.move_idx -= 1
         last_move = self.move_history[self.move_idx]
-        self.make_move(last_move, trunc=False)
-        self.move_idx += 1 
+
+        pi, pj = self.get_player_pos()
+        self.grid[pi][pj].is_player = False
+
+        directions = {'w': (-1,0), 's': (1,0), 'a': (0,-1), 'd': (0,1)}
+        di, dj = directions[last_move.direction]
+
+        # Player moves back
+        back_i, back_j = pi - di, pj - dj
+        self.grid[back_i][back_j].is_player = True
+
+        if last_move.pushed:
+            # Move box back
+            box_i, box_j = pi + di, pj + dj
+            self.grid[box_i][box_j].is_box = False
+            self.grid[pi][pj].is_box = True
+
+    def redo_move(self):
+        if self.move_idx >= len(self.move_history):
+            return
+
+        move = self.move_history[self.move_idx]
+        # replay move without recording again
+        self.make_move(move.direction, truncate=False)
+        self.move_idx += 1
 
     def is_solved(self) -> bool:
         bs = self.get_board_state() 

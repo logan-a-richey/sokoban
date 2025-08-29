@@ -24,6 +24,9 @@ class GameManager:
         self.level_loader = LevelLoader()
         self.level_loader.load_levels()
         self.data = self.level_loader.get_data()
+        
+        self.last_levelname = ""
+        self.last_levelset = ""
 
         # core gui logic
         self.main_window = MainWindow(root, self)
@@ -54,15 +57,17 @@ class GameManager:
         self.engine.new_game(level_data)
         self.on_refresh()
 
-    def on_level_reset(self):
+    def  on_level_reload(self):
         print("on_level_reset")
-        pass
+        self.load_level(self.last_levelset, self.last_levelname)
     
-    def on_level_load_from_file(self, filepath: str):
+    # TODO
+    def on_level_import(self, filepath: str):
         print("Loading level ...")
         pass 
-
-    def on_levelset_load_from_file(self, path: str):
+    
+    # TODO
+    def on_levelset_import(self, path: str):
         print("Loading levelsets ...")
         pass
     
@@ -83,7 +88,6 @@ class GameManager:
         self.engine.undo_move()
         self.on_refresh()
 
-
     def check_is_win(self):
         if self.seen_win:
             return
@@ -95,8 +99,8 @@ class GameManager:
         self.main_window.win_popup.trigger()
         
         # TODO - progress manager
-        return
-    
+        pass
+
     # ui functions  --------------------------------------------------
     def on_zoom_in(self):
         print("on_zoom_in")

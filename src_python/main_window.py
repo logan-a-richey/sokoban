@@ -14,7 +14,7 @@ class MainWindow(tk.Frame):
         # self.pack() # TODO
         
         self.about_popup = AboutPopup(root, controller) 
-        self.win_popup = WinPopup(self, controller) 
+        self.win_popup = WinPopup(root, controller) 
 
         self.canvas = MainCanvas(root, controller)
 
@@ -68,9 +68,9 @@ class MainWindow(tk.Frame):
         # fetch level data to populate menus
         data : dict = self.controller.level_loader.get_data()
         on_quit : callable = self.controller.on_quit
-        on_level_reset : callable = self.controller.on_level_reset
-        on_level_load_from_file : callable = self.controller.on_level_load_from_file
-        on_levelset_load_from_file : callable = self.controller.on_levelset_load_from_file
+        on_level_reload : callable = self.controller.on_level_reload
+        on_level_import: callable = self.controller.on_level_import
+        in_levelset_import : callable = self.controller.on_levelset_import
         on_level_load : callable = self.controller.load_level
 
         # setup menu
@@ -79,10 +79,10 @@ class MainWindow(tk.Frame):
 
         file_menu = tk.Menu(menubar, tearoff=0)
 
-        file_menu.add_command(label="Reset Level [CTRL N]", command=lambda: on_level_reset)
-        file_menu.add_command(label="Load Level", command=lambda: on_level_load_from_file)
-        file_menu.add_command(label="Load Levelset", command=lambda: on_levelset_load_from_file)
-        file_menu.add_command(label="Exit", command=lambda: on_quit() )
+        file_menu.add_command(label="Reload Current Level (Ctrl+N)", command=lambda: on_level_reset)
+        file_menu.add_command(label="Import Level", command=lambda: on_level_import)
+        file_menu.add_command(label="Import Levelset", command=lambda: on_levelset_import)
+        file_menu.add_command(label="Exit (Escape)", command=lambda: on_quit() )
         menubar.add_cascade(label="File", menu=file_menu)
         
         # level select
@@ -94,18 +94,11 @@ class MainWindow(tk.Frame):
         menubar.add_cascade(label="About", menu=about_menu)
 
     def bind_events(self):
-        '''
-        ctrl n = reset
-        ctrl z = undo move
-        ctrl y = redo move
-        W, A, S, D    = make move
-        '''
-        
         on_make_move : callable = self.controller.on_make_move
         on_quit : callable = self.controller.on_quit
         on_zoom_in : callable = self.controller.on_zoom_in 
         on_zoom_out : callable = self.controller.on_zoom_out 
-        on_level_reset : callable = self.controller.on_level_reset
+        on_level_reload : callable = self.controller.on_level_reload
         on_undo_move : callable = self.controller.on_undo_move
         on_redo_move : callable = self.controller.on_redo_move
 
@@ -116,7 +109,7 @@ class MainWindow(tk.Frame):
 
         self.root.bind("<Escape>", lambda event: on_quit() ) 
 
-        self.root.bind('<Control-n>', lambda event: on_level_reset() )
+        self.root.bind('<Control-n>', lambda event: on_level_reload() )
         self.root.bind('<Control-z>', lambda event:on_undo_move() )
         self.root.bind('<Control-y>', lambda event:on_redo_move() )
         
